@@ -298,14 +298,13 @@ class Confluence(AtlassianRestAPI):
 
     @deprecated
     def get_page_by_title_bbf(self, space, title, status='current',
-                          representation='storage', expand=None):
-        expand = expand + ',' if expand else ''
-        expand += 'body.{representation}'.format(representation=representation)
+                          representation='storage'):
         url = '/rest/api/content?spaceKey={space}&title={title}&' \
-              'status={status}&expand={expand}'.format(space=space,
-                                                       title=title,
-                                                       status=status,
-                                                       expand=expand)
+              'status={status}&expand=body.{representation}'.format(
+                space=space, title=title, status=status,
+                representation=representation)
+        results = self.get(url)['results']
+        return results if len(results) > 1 else results[0] if results else None
 
     def get_page_by_title(self, space, title, start=0, limit=1, expand=None):
         """
@@ -354,11 +353,10 @@ class Confluence(AtlassianRestAPI):
 
     @deprecated
     def get_page_by_id_bbf(self, page_id, status='current',
-                       representation='storage', expand=None):
-        expand = expand + ',' if expand else ''
-        expand += 'body.{representation}'.format(representation=representation)
-        url = '/rest/api/content/{page_id}?status={status}&expand={expand}'.\
-            format(page_id=page_id, status=status, expand=expand)
+                       representation='storage'):
+        url = '/rest/api/content/{page_id}?status={status}&expand=body.{' \
+              'representation}'.format(page_id=page_id, status=status,
+                                       representation=representation)
         return self.get(url)
 
     def get_page_by_id(self, page_id, expand=None, status=None, version=None):
