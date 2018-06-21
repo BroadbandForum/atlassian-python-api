@@ -76,7 +76,6 @@ class Confluence(AtlassianRestAPI):
             items = None
         return None if not items else items if details else items['results']
 
-    # XXX need to replace this with the official one below
     @deprecated
     def get_space_bbf(self, space, expand=None):
         expand = expand + ',' if expand else ''
@@ -288,25 +287,25 @@ class Confluence(AtlassianRestAPI):
         """
         return self.get_page_by_title(space, title, start, limit, expand)
 
-    # XXX need to replace this with the official one below
-    @deprecated
-    def get_page_by_title_bbf(self, space, title, status='current',
-                          representation='storage', expand=None, limit=None):
-        expand = expand + ',' if expand else ''
-        if representation:
-            expand += 'body.{representation}'.format(
-                    representation=representation)
-        limit = '&limit={limit}'.format(limit=limit) if limit else ''
-        url = '/rest/api/content?spaceKey={space}&title={title}&' \
-              'status={status}&expand={expand}{limit}'.format(space=space,
-                                                              title=title,
-                                                              status=status,
-                                                              expand=expand,
-                                                              limit=limit)
         page = self.get(url)
         results = page['results'] if page else None
         return None if not results else results[0] if len(
                 results) == 1 else results
+
+    def get_page_title(self, page_id):
+        page = self.get_page_by_id(page_id)
+        return page.get('title') if page else None
+
+    @deprecated
+    def get_page_by_title_bbf(self, space, title, status='current',
+                          representation='storage', expand=None):
+        expand = expand + ',' if expand else ''
+        expand += 'body.{representation}'.format(representation=representation)
+        url = '/rest/api/content?spaceKey={space}&title={title}&' \
+              'status={status}&expand={expand}'.format(space=space,
+                                                       title=title,
+                                                       status=status,
+                                                       expand=expand)
 
     def get_page_by_title(self, space, title, start=0, limit=1, expand=None):
         """
@@ -353,18 +352,13 @@ class Confluence(AtlassianRestAPI):
             log.debug(e)
             return None
 
-    # XXX need to replace this with the official one below
     @deprecated
     def get_page_by_id_bbf(self, page_id, status='current',
-                       representation='storage', expand=None, limit=None):
+                       representation='storage', expand=None):
         expand = expand + ',' if expand else ''
-        if representation:
-            expand += 'body.{representation}'.format(
-                    representation=representation)
-        limit = '&limit={limit}'.format(limit=limit) if limit else ''
-        url = '/rest/api/content/{page_id}?status={status}&expand={expand}' \
-              '{limit}'.format(page_id=page_id, status=status, expand=expand,
-                               limit=limit)
+        expand += 'body.{representation}'.format(representation=representation)
+        url = '/rest/api/content/{page_id}?status={status}&expand={expand}'.\
+            format(page_id=page_id, status=status, expand=expand)
         return self.get(url)
 
     def get_page_by_id(self, page_id, expand=None, status=None, version=None):
@@ -735,7 +729,6 @@ class Confluence(AtlassianRestAPI):
 
         return response
 
-    # XXX need to replace this with the official one below
     @deprecated
     def create_page_bbf(self, space, parent_id, title, body, type='page'):
         log.info('Creating {type} "{space}" -> "{title}"'.format(space=space, title=title, type=type))
@@ -1425,6 +1418,21 @@ class Confluence(AtlassianRestAPI):
             minor_edit=minor_edit,
             version_comment=version_comment,
         )
+
+    @deprecated
+    def update_page_bbf(self, parent_id, page_id, title, body, type='page',
+                    is_already_updated=None):
+        log.info('Updating {type} "{title}"'.format(title=title, type=type))
+
+        if is_already_updated is None:
+            def is_already_updated(self_, page_id_, body_):
+                return self_.is_page_content_is_already_updated(page_id_,
+                                                                body_)
+
+        if is_already_updated(self, page_id, body):
+            return self.get_page_by_id(page_id)
+
+        return self.update_page(page_id, title, body, parent_id, type)
 
     def update_page(
         self,
