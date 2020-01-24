@@ -87,6 +87,22 @@ class Confluence(AtlassianRestAPI):
 
         return {representation: {"value": body, "representation": representation}}
 
+    def get_space_property(self, space, expand=None):
+        expand = expand + ',' if expand else ''
+        url = '/rest/api/space/{space}/property?expand={expand}'.format(
+                space=space,
+                expand=expand)
+        return self.get(url)
+
+    def get_space_content(self, space, expand=None, start=None, limit=None):
+        expand = expand + ',' if expand else ''
+        start = '&start={start}'.format(start=start) if start else ''
+        limit = '&limit={limit}'.format(limit=limit) if limit else ''
+        url = '/rest/api/space/{space}/content?expand={expand}{start}{' \
+              'limit}'.format(space=space, expand=expand, start=start,
+                              limit=limit)
+        return self.get(url)
+
     def page_exists(self, space, title):
         try:
             if self.get_page_by_title(space, title):
