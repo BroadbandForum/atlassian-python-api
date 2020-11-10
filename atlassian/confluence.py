@@ -37,6 +37,49 @@ class Confluence(AtlassianRestAPI):
                 kwargs["cloud"] = True
         super(Confluence, self).__init__(url, *args, **kwargs)
 
+    # this could return many results; use with care!
+    def search(self, cql, expand=None, limit=None):
+        limit0 = limit
+        start = 0
+        limit = 9999
+        results = []
+        while limit0 is None or start < limit0:
+            limit = limit if limit0 is None else min(limit0 - start, limit)
+            log.debug('Search start={start}, limit={limit}/{limit0} cql=<{cql}>'.
+                      format(start=start, limit=limit, limit0=limit0, cql=cql))
+            items = self.search1(cql, expand=expand, start=start, limit=limit,
+                                 details=True)
+            if items is None:
+                break
+            size = items['size']
+            limit = items['limit']
+            results += items['results']
+            start += size
+            if 'next' not in items['_links']:
+                break
+        return results
+
+    def search1(self, cql, expand=None, start=None, limit=None, details=None):
+        expand = expand + ',' if expand else ''
+        cql = urllib.parse.quote(cql)
+        url = '/rest/api/content/search?cql={cql}&expand={expand}'.format(cql=cql, expand=expand)
+        if start is not None: url += '&start={start}'.format(start=start)
+        if limit is not None: url += '&limit={limit}'.format(limit=limit)
+        try:
+            items = self.get(url)
+        except Exception as e:
+            log.error('Exception: %s' % e)
+            items = None
+        return None if not items else items if details else items['results']
+
+    def get_space(self, space, expand=None, type=None, status=None):
+        expand = expand + ',' if expand else ''
+        type = '&type=%s' % type if type else ''
+        status = '&status=%s' % status if status else ''
+        url = '/rest/api/space/{space}?expand={expand}{type}{status}'.format(
+                space=space, expand=expand, type=type, status=status)
+        return self.get(url)
+
     @staticmethod
     def _create_body(body, representation):
         if representation not in ["editor", "export_view", "view", "storage", "wiki"]:
