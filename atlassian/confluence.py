@@ -4,8 +4,6 @@ import logging
 import os
 import time
 import urllib.parse
-from requests.exceptions import HTTPError
-from atlassian import AtlassianRestAPI
 
 from requests import HTTPError
 from deprecated import deprecated
@@ -77,19 +75,37 @@ class Confluence(AtlassianRestAPI):
         return None if not items else items if details else items['results']
 
     @deprecated
-    def get_space_bbf(self, space, expand=None):
-        expand = expand + ',' if expand else ''
-        url = '/rest/api/space/{space}?expand={expand}'.format(
-                space=space, expand=expand)
-        return self.get(url)
-
-    def get_space(self, space, expand=None, type=None, status=None):
+    def get_space_bbf(self, space, expand=None, type=None, status=None):
         expand = expand + ',' if expand else ''
         type = '&type=%s' % type if type else ''
         status = '&status=%s' % status if status else ''
         url = '/rest/api/space/{space}?expand={expand}{type}{status}'.format(
                 space=space, expand=expand, type=type, status=status)
         return self.get(url)
+
+    def get_space(self, space_key, expand="description.plain,homepage"):
+        """
+        Get information about a space through space key
+        :param space_key: The unique space key name
+        :param expand: OPTIONAL: additional info from description, homepage
+        :return: Returns the space along with its ID
+        """
+        url = "rest/api/space/{space_key}".format(space_key=space_key)
+        params = {}
+        if expand:
+            params["expand"] = expand
+        try:
+            response = self.get(url, params=params)
+        except HTTPError as e:
+            if e.response.status_code == 404:
+                # Raise ApiError as the documented reason is ambiguous
+                raise ApiError(
+                        "There is no space with the given key, "
+                        "or the calling user does not have permission to view the space",
+                        reason=e,
+                )
+            raise
+        return response
 
     @staticmethod
     def _create_body(body, representation):
